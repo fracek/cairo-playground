@@ -59,17 +59,7 @@ async def starknet_factory(erc20_definition) -> StarknetFactory:
 async def test_initialize_invariant(starknet_factory: StarknetFactory, amount: Felt):
     starknet, erc20 = starknet_factory()
 
-    pre_alice_balance = await starknet.invoke_raw(
-        contract_address=erc20,
-        selector='balance_of',
-        calldata=[ALICE],
-    )
-
-    pre_bob_balance = await starknet.invoke_raw(
-        contract_address=erc20,
-        selector='balance_of',
-        calldata=[BOB],
-    )
+    pre_alice_balance, pre_bob_balance = await _get_balances(starknet, erc20)
 
     await starknet.invoke_raw(
         contract_address=erc20,
@@ -77,17 +67,28 @@ async def test_initialize_invariant(starknet_factory: StarknetFactory, amount: F
         calldata=[ALICE, BOB, amount],
     )
 
-    post_alice_balance = await starknet.invoke_raw(
+    post_alice_balance, post_bob_balance = await _get_balances(starknet, erc20)
+
+    # balances changed
+    assert post_alice_balance + amount == pre_alice_balance
+    assert pre_bob_balance + amount == post_bob_balance
+
+    # transfer does not create new tokens
+    assert pre_alice_balance + pre_bob_balance == TOTAL_SUPPLY
+    assert post_alice_balance + post_bob_balance == TOTAL_SUPPLY
+
+
+async def _get_balances(starknet: Starknet, erc20: int) -> Tuple[int, int]:
+    alice_balance = await starknet.invoke_raw(
         contract_address=erc20,
         selector='balance_of',
         calldata=[ALICE],
     )
 
-    post_bob_balance = await starknet.invoke_raw(
+    bob_balance = await starknet.invoke_raw(
         contract_address=erc20,
         selector='balance_of',
         calldata=[BOB],
     )
 
-    assert pre_alice_balance.retdata[0] + pre_bob_balance.retdata[0] == TOTAL_SUPPLY
-    assert post_alice_balance.retdata[0] + post_bob_balance.retdata[0] == TOTAL_SUPPLY
+    return alice_balance.retdata[0], bob_balance.retdata[0]
