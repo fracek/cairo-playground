@@ -2,7 +2,6 @@ from typing import Protocol, Tuple
 import pytest
 import asyncio
 from pathlib import Path
-import time
 
 from hypothesis import given, settings
 
@@ -58,7 +57,7 @@ async def test_initialize(starknet_factory: StarknetFactory):
     assert init_res.retdata == [42]
 
 
-@given(value=felt(min_value=0))
+@given(value=felt())
 @settings(max_examples=10)
 @pytest.mark.asyncio
 async def test_initialize_invariant(starknet_factory: StarknetFactory, value: Felt):
@@ -70,4 +69,4 @@ async def test_initialize_invariant(starknet_factory: StarknetFactory, value: Fe
         calldata=[value]
     )
 
-    assert init_res.retdata == [value+1]
+    assert init_res.retdata == [value]
